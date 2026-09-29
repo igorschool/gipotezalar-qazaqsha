@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Өмірдің пайда болу гипотезалары · анимация 30 с</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      background: #1a3048;
+      color: #fff8ee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 12px 24px;
+    }
+    h1 { margin: 0 0 8px; font-size: 22px; text-align: center; }
+    .hint { margin: 0 0 12px; font-size: 14px; color: #cfe4f5; text-align: center; }
+    .theories {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 12px;
+      max-width: 960px;
+    }
+    .theories button {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 800;
+      cursor: pointer;
+      background: #2b5270;
+      color: #fff;
+      box-shadow: 0 4px 0 #16344a;
+    }
+    .theories button.on { background: #f0b429; color: #3b2414; box-shadow: 0 4px 0 #b88410; }
+    canvas {
+      width: min(960px, 100%);
+      height: auto;
+      background: #87ceeb;
+      border-radius: 16px;
+      box-shadow: 0 10px 0 #122536;
+      display: block;
+    }
+    .btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 14px;
+    }
+    .btns button {
+      min-width: 160px;
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      color: #fff;
+      box-shadow: 0 5px 0 #0d2130;
+    }
+    .btns button:active { transform: translateY(3px); box-shadow: 0 2px 0 #0d2130; }
+    .btns button:disabled { opacity: .45; cursor: default; transform: none; }
+    #btnPlay { background: #2faf4a; }
+    #btnRecord { background: #e63946; }
+    #btnStop { background: #6b7280; }
+    #btnDownload { background: #2b8fe0; }
+    #status { margin-top: 10px; min-height: 1.4em; text-align: center; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>Өмірдің пайда болу гипотезалары</h1>
+  <p class="hint">6.2.4.1 · суреттер + қазақша дыбыстау · 30 секунд · Chrome-да аш</p>
+  <div class="theories" id="theoryBar"></div>
+  <canvas id="cv" width="960" height="540"></canvas>
+    <audio id="voice" preload="auto" playsinline></audio>
+  <div class="btns">
+    <button type="button" id="btnPlay">▶ Ойнату</button>
+    <button type="button" id="btnRecord">⏺ Бейне жазу</button>
+    <button type="button" id="btnStop">⏹ Тоқтату</button>
+    <button type="button" id="btnDownload" disabled>📥 Бейнені жүктеу</button>
+  </div>
+  <div id="status">Суреттер мен дыбыстау жүктелуде…</div>
+
+  <script>
+    const W = 960, H = 540, TOTAL = 30, FPS = 30;
+    const ASSET = "anim-assets/";
+
+    const canvas = document.getElementById("cv");
+    const ctx = canvas.getContext("2d");
+    const statusEl = document.getElementById("status");
+    const btnPlay = document.getElementById("btnPlay");
+    const btnRecord = document.getElementById("btnRecord");
+    const btnStop = document.getElementById("btnStop");
+    const btnDownload = document.getElementById("btnDownload");
+    const voiceEl = document.getElementById("voice");
+
+    const IMG_FILES = [
+      "bg-earth.png", "bg-space.png", "bg-ocean.png", "bg-garden.png", "bg-lab.png",
+      "spr-earth.png", "spr-cloud.png", "spr-star.png", "spr-lightning.png", "spr-pond.png",
+      "spr-droplet.png", "spr-meteor.png", "spr-spark.png", "spr-vent.png", "spr-bubble.png",
+      "spr-sun.png", "spr-flower.png", "spr-bird.png", "spr-meat.png", "spr-fly.png",
+      "spr-microscope.png", "spr-jar.png", "spr-flask.png"
+    ];
+    const imgs = {};
+
+    const THEORIES = [
+      {
+        id: "bio",
+        title: "Биохимиялық",
+        voice: ASSET + "voice-bio.mp3?v=1",
+        subs: [
+          { from: 0, to: 7, text: "Балалар, Жерді ертеде елестетіңдер. Ағаш та, аң да жоқ." },
+          { from: 7, to: 15, text: "Жылы шалшық болды. Опарин оны алғашқы сорпа деп атады." },
+          { from: 15, to: 23, text: "Найзағай соқты — алғашқы тірі тамшылар пайда болды." },
+          { from: 23, to: 30, text: "Бұл тек гипотеза. Біз оны әлі тексереміз." }
+        ]
+      },
+      {
+        id: "cosmo",
+        title: "Ғарыштық",
+        voice: ASSET + "voice-cosmo.mp3?v=1",
+        subs: [
+          { from: 0, to: 7, text: "Ал енді басқа ой. Өмір ғарыштан келген болуы мүмкін." },
+          { from: 7, to: 15, text: "Метеоритпен, кішкентай ұшқынмен." },
+          { from: 15, to: 23, text: "Метеорит құлады — өмір Жерге келді." },
+          { from: 23, to: 30, text: "Бірақ ол онда қайдан шықты? Әзірге білмейміз." }
+        ]
+      },
+      {
+        id: "hydro",
+        title: "Ыстық көздер",
+        voice: ASSET + "voice-hydro.mp3?v=1",
+        subs: [
+          { from: 0, to: 7, text: "Енді мұхит түбіне қарайық. Онда қараңғы әрі тыныш." },
+          { from: 7, to: 15, text: "Түтіктерден ыстық су заттармен атылады." },
+          { from: 15, to: 23, text: "Солардан бірінші тірі пайда болған болуы мүмкін." },
+          { from: 23, to: 30, text: "Өмір теңізде басталған болуы мүмкін. Мұны да тексереді." }
+        ]
+      },
+      {
+        id: "create",
+        title: "Жаратылыс",
+        voice: ASSET + "voice-create.mp3?v=1",
+        subs: [
+          { from: 0, to: 7, text: "Мұндай көзқарас та бар: әлемді Жаратушы жаратты." },
+          { from: 7, to: 15, text: "Жарық, су, өсімдіктер, жануарлар — бәрі ойластырылған." },
+          { from: 15, to: 23, text: "Бұл тәжірибе емес. Бұл сенім, әлемге көзқарас." },
+          { from: 23, to: 30, text: "Идеяларды салыстырамыз. Кім дұрыс деп дауласпаймыз." }
+        ]
+      },
+      {
+        id: "spont",
+        title: "Өздігінен пайда болу",
+        voice: ASSET + "voice-spont.mp3?v=1",
+        subs: [
+          { from: 0, to: 7, text: "Бұрын тірі өлі нәрседен өзі пайда болады деп ойлаған." },
+          { from: 7, to: 15, text: "Реди етті жауып қойды — шыбындар өздігінен шықпады." },
+          { from: 15, to: 23, text: "Пастер дәлелдеді: тірі тек тіріден болады." },
+          { from: 23, to: 30, text: "Бұл ескі ойды тексерді — ол қате болып шықты." }
+        ]
+      }
+    ];
+
+    let theoryIndex = 0;
+    let t = 0;
+    let playing = false;
+    let lastTs = 0;
+    let recorder = null;
+    let chunks = [];
+    let downloadUrl = "";
+    let stream = null;
+    let assetsReady = false;
+
+    function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+    function lerp(a, b, u) { return a + (b - a) * u; }
+    function easeOut(u) { u = clamp01(u); return 1 - Math.pow(1 - u, 3); }
+    function easeInOut(u) {
+      u = clamp01(u);
+      return u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+    }
+    function progress(start, end) {
+      if (end <= start) return 1;
+      return clamp01((t - start) / (end - start));
+    }
+
+    function loadImage(name) {
+      return new Promise((resolve) => {
+        const im = new Image();
+        im.onload = () => resolve(im);
+        im.onerror = () => {
+          console.warn("Сурет жүктелмеді:", name);
+          resolve(im);
+        };
+        im.src = ASSET + name;
+        imgs[name] = im;
+      });
+    }
+
+    function preloadAll() {
+      return Promise.all(IMG_FILES.map(loadImage));
+    }
+
+    function roundRect(x, y, w, h, r, fill) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+      ctx.fillStyle = fill;
+      ctx.fill();
+    }
+
+    function drawPanel(x, y, w, h, fill) {
+      ctx.save();
+      ctx.shadowColor = "rgba(0,0,0,.28)";
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 6;
+      roundRect(x, y, w, h, 16, fill);
+      ctx.restore();
+    }
+
+    function drawText(text, x, y, opt) {
+      const size = (opt && opt.size) || 28;
+      const color = (opt && opt.color) || "#3b2414";
+      const align = (opt && opt.align) || "center";
+      ctx.save();
+      ctx.font = "800 " + size + "px Arial";
+      ctx.textAlign = align;
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = "rgba(255,255,255,.75)";
+      ctx.strokeText(text, x, y);
+      ctx.fillStyle = color;
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    }
+
+    function wrapLines(text, maxWidth) {
+      const words = text.split(" ");
+      const lines = [];
+      let cur = "";
+      words.forEach((w) => {
+        const test = cur ? cur + " " + w : w;
+        if (ctx.measureText(test).width > maxWidth && cur) {
+          lines.push(cur);
+          cur = w;
+        } else {
+          cur = test;
+        }
+      });
+      if (cur) lines.push(cur);
+      return lines;
+    }
+
+    function drawBg(name) {
+      const im = imgs[name];
+      if (im && im.complete && im.naturalWidth) {
+        ctx.drawImage(im, 0, 0, W, H);
+      } else {
+        ctx.fillStyle = "#6ec6f0";
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+
+    function drawSprite(name, x, y, size, alpha) {
+      const im = imgs[name];
+      if (!im || !im.complete || !im.naturalWidth) return;
+      ctx.save();
+      ctx.globalAlpha = alpha == null ? 1 : alpha;
+      ctx.beginPath();
+      ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(im, x - size / 2, y - size / 2, size, size);
+      ctx.restore();
+    }
+
+    function drawSpriteFree(name, x, y, w, h, alpha) {
+      const im = imgs[name];
+      if (!im || !im.complete || !im.naturalWidth) return;
+      ctx.save();
+      ctx.globalAlpha = alpha == null ? 1 : alpha;
+      ctx.drawImage(im, x - w / 2, y - h / 2, w, h);
+      ctx.restore();
+    }
+
+    function movingClouds() {
+      for (let i = 0; i < 4; i++) {
+        const x = ((t * 22 + i * 240) % (W + 160)) - 80;
+        const y = 46 + (i % 3) * 26;
+        drawSprite("spr-cloud.png", x, y, 88, 0.88);
+      }
+    }
+
+    function twinkleStars() {
+      for (let i = 0; i < 18; i++) {
+        const x = 40 + (i * 53) % (W - 80);
+        const y = 30 + (i * 37) % 280;
+        const pulse = 0.45 + 0.55 * Math.abs(Math.sin(t * 2 + i));
+        drawSprite("spr-star.png", x, y, 18 + (i % 3) * 6, pulse);
+      }
+    }
+
+    function sceneBio() {
+      drawBg("bg-earth.png");
+      movingClouds();
+      const p1 = easeOut(progress(0, 6));
+      const p2 = easeInOut(progress(6, 14));
+      const p3 = easeOut(progress(14, 22));
+      const p4 = easeOut(progress(22, 30));
+
+      drawSprite("spr-earth.png", 110, 100, 110 * (0.7 + 0.3 * p1));
+      if (p1 > 0.25) drawText("Жылы шалшық — алғашқы сорпа", 480, 250, { size: 26 });
+
+      if (t > 6) {
+        const lx = lerp(220, 520, p2);
+        drawSprite("spr-lightning.png", lx, 150 + Math.sin(t * 8) * 8, 90);
+        drawSprite("spr-flask.png", 820, 150, 92, 0.9);
+      }
+      if (t > 14) {
+        const s = 70 + 40 * p3;
+        drawSprite("spr-droplet.png", 430, 330, s);
+        drawSprite("spr-spark.png", 540, 310, 70 + 10 * Math.sin(t * 4));
+      }
+      if (t > 22) {
+        ctx.globalAlpha = p4;
+        drawPanel(150, 70, 660, 70, "rgba(255,248,238,.92)");
+        drawText("Опарин гипотезасы. Оны әлі тексереді.", 480, 105, { size: 24 });
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function sceneCosmo() {
+      drawBg("bg-space.png");
+      twinkleStars();
+      const p1 = easeOut(progress(0, 6));
+      const p2 = easeInOut(progress(6, 16));
+      const p3 = easeOut(progress(16, 24));
+      drawSprite("spr-earth.png", 820, 400, 130 * (0.6 + 0.4 * p1));
+      const mx = lerp(90, 740, p2);
+      const my = lerp(90, 340, p2);
+      ctx.save();
+      ctx.translate(mx, my);
+      ctx.rotate(t * 0.35);
+      drawSprite("spr-meteor.png", 0, 0, 110);
+      ctx.restore();
+      if (t > 4) drawSprite("spr-spark.png", mx - 50, my + 12, 48);
+      if (t > 16) {
+        ctx.globalAlpha = p3;
+        drawPanel(160, 60, 640, 80, "rgba(20,10,40,.72)");
+        drawText("Ал егер өмір ұшып келсе?", 480, 100, { size: 28, color: "#fff4c8" });
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function sceneHydro() {
+      drawBg("bg-ocean.png");
+      const p2 = easeInOut(progress(6, 16));
+      if (t > 6) {
+        for (let i = 0; i < 8; i++) {
+          const x = 310 + Math.sin(t * 2 + i) * 22;
+          const y = 280 - (t * 36 + i * 22) % 220;
+          drawSprite("spr-bubble.png", x, y, 28, 0.55 * p2);
+        }
+        drawSprite("spr-spark.png", 330, 250, 56, 0.8 + 0.2 * Math.sin(t * 5));
+      }
+      if (t > 14) {
+        ctx.globalAlpha = easeOut(progress(14, 22));
+        drawSprite("spr-droplet.png", 700, 260, 70);
+        drawPanel(170, 50, 620, 70, "rgba(255,248,238,.9)");
+        drawText("Түбінде жылы. Онда заттар бар.", 480, 85, { size: 26 });
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function sceneCreate() {
+      drawBg("bg-garden.png");
+      movingClouds();
+      const p1 = easeOut(progress(0, 8));
+      const p2 = easeOut(progress(8, 18));
+      drawSprite("spr-sun.png", 820, 90, 110, 0.7 + 0.3 * Math.sin(t));
+      drawSprite("spr-earth.png", 480, 240, 90 + 16 * p1);
+      if (t > 6) {
+        drawSprite("spr-flower.png", 250, 360, 90, p2);
+        drawSprite("spr-bird.png", 700 + Math.sin(t) * 10, 300, 86, p2);
+        drawSprite("spr-droplet.png", 180, 300, 64, p2);
+      }
+      if (t > 18) {
+        ctx.globalAlpha = easeOut(progress(18, 26));
+        drawPanel(140, 60, 680, 80, "rgba(255,248,238,.93)");
+        drawText("Бұл әлемге көзқарас. Дауласпаймыз.", 480, 100, { size: 24 });
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function sceneSpont() {
+      drawBg("bg-lab.png");
+      const p1 = easeOut(progress(0, 6));
+      const p2 = easeInOut(progress(7, 15));
+      const p3 = easeOut(progress(15, 23));
+      drawPanel(80, 260, 800, 210, "rgba(255,248,238,.72)");
+      drawSprite("spr-meat.png", 280, 360, 130 * (0.75 + 0.25 * p1));
+      if (t < 8) {
+        drawSprite("spr-fly.png", 360 + Math.sin(t * 6) * 28, 250, 70);
+        drawSprite("spr-fly.png", 210, 230 + Math.cos(t * 5) * 16, 56);
+        drawText("Бұрын осылай ойлаған", 480, 80, { size: 28, color: "#c43a22" });
+      } else {
+        ctx.globalAlpha = p2;
+        drawSpriteFree("spr-jar.png", 280, 330, 180, 180);
+        drawText("Реди етті жауып қойды", 480, 80, { size: 28 });
+        ctx.globalAlpha = 1;
+      }
+      if (t > 15) {
+        ctx.globalAlpha = p3;
+        drawSprite("spr-microscope.png", 700, 350, 130);
+        drawSprite("spr-flask.png", 820, 250, 80);
+        drawPanel(160, 120, 640, 70, "rgba(255,248,238,.94)");
+        drawText("Пастер: тірі — тек тіріден", 480, 155, { size: 26, color: "#0a7d3b" });
+        ctx.globalAlpha = 1;
+      }
+      if (t > 23) {
+        ctx.globalAlpha = easeOut(progress(23, 28));
+        drawText("Бұл ойды жоққа шығарды", 480, 480, { size: 32, color: "#e63946" });
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    function drawSubtitle() {
+      const subs = THEORIES[theoryIndex].subs;
+      const item = subs.find((s) => t >= s.from && t < s.to);
+      if (!item) return;
+      ctx.save();
+      ctx.font = "700 20px Arial";
+      const lines = wrapLines(item.text, W - 120);
+      const boxH = 28 + lines.length * 26;
+      ctx.globalAlpha = 0.78;
+      roundRect(40, H - 40 - boxH, W - 80, boxH, 10, "#000");
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      lines.forEach((line, i) => {
+        ctx.fillText(line, W / 2, H - 40 - boxH + 22 + i * 26);
+      });
+      ctx.restore();
+    }
+
+    function drawProgress() {
+      const w = (t / TOTAL) * W;
+      const g = ctx.createLinearGradient(0, 0, W, 0);
+      g.addColorStop(0, "#ffe27a");
+      g.addColorStop(1, "#e63946");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, H - 8, w, 8);
+    }
+
+    function render(time) {
+      t = Math.max(0, Math.min(TOTAL, time));
+      const id = THEORIES[theoryIndex].id;
+      if (id === "bio") sceneBio();
+      else if (id === "cosmo") sceneCosmo();
+      else if (id === "hydro") sceneHydro();
+      else if (id === "create") sceneCreate();
+      else sceneSpont();
+      drawSubtitle();
+      drawProgress();
+    }
+
+    function loop(ts) {
+      if (!lastTs) lastTs = ts;
+      const dt = (ts - lastTs) / 1000;
+      lastTs = ts;
+      if (playing) {
+        t += dt;
+        if (t >= TOTAL) {
+          t = TOTAL;
+          playing = false;
+          stopVoice();
+          if (recorder && recorder.state !== "inactive") stopRecording();
+        }
+      }
+      render(t);
+      requestAnimationFrame(loop);
+    }
+
+    function pickMime() {
+      const types = [
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp9",
+        "video/webm;codecs=vp8,opus",
+        "video/webm;codecs=vp8",
+        "video/webm",
+        "video/mp4"
+      ];
+      if (!window.MediaRecorder) return "";
+      for (let i = 0; i < types.length; i++) {
+        if (MediaRecorder.isTypeSupported(types[i])) return types[i];
+      }
+      return "";
+    }
+
+    function setVoiceSrc() {
+      const src = THEORIES[theoryIndex].voice;
+      if (voiceEl.getAttribute("data-src") !== src) {
+        voiceEl.src = src;
+        voiceEl.load();
+        voiceEl.setAttribute("data-src", src);
+      }
+      voiceEl.muted = false;
+      voiceEl.volume = 1;
+    }
+
+    function playVoice() {
+      setVoiceSrc();
+      const start = () => {
+        try { voiceEl.currentTime = 0; } catch (e) {}
+        const p = voiceEl.play();
+        if (p && p.catch) {
+          p.catch((err) => {
+            console.error("Дыбыстау:", err);
+            statusEl.textContent = "Дыбыс жоқ. Chrome-да ашып, «Ойнату»-ды қайта бас.";
+          });
+        }
+      };
+      if (voiceEl.readyState >= 2) {
+        start();
+        return;
+      }
+      voiceEl.addEventListener("canplay", start, { once: true });
+      voiceEl.addEventListener("error", () => {
+        statusEl.textContent = "Дыбыстау файлы табылмады: " + THEORIES[theoryIndex].voice;
+      }, { once: true });
+    }
+
+    function stopVoice() {
+      try { voiceEl.pause(); voiceEl.currentTime = 0; } catch (e) {}
+    }
+
+    function captureVoiceTrack() {
+      try {
+        const cap = voiceEl.captureStream || voiceEl.mozCaptureStream;
+        if (!cap) return null;
+        const s = cap.call(voiceEl);
+        return s.getAudioTracks()[0] || null;
+      } catch (e) {
+        console.warn("Жазу үшін дыбысты алу мүмкін болмады", e);
+        return null;
+      }
+    }
+
+    function stopRecording() {
+      if (!recorder || recorder.state === "inactive") return;
+      try { recorder.requestData(); } catch (e) {}
+      try { recorder.stop(); } catch (e) {}
+    }
+
+    function startPlay() {
+      t = 0;
+      playing = true;
+      lastTs = 0;
+      playVoice();
+      statusEl.textContent = "▶ Көрсетілім: " + THEORIES[theoryIndex].title;
+    }
+
+    function startRecord() {
+      if (!window.MediaRecorder) {
+        alert("MediaRecorder қолдау көрсетілмейді. Google Chrome-да аш.");
+        return;
+      }
+      const mime = pickMime();
+      if (!mime) {
+        alert("Қолайлы кодек жоқ. Chrome-ды көр.");
+        return;
+      }
+      console.log("Кодек:", mime);
+      chunks = [];
+      if (downloadUrl) URL.revokeObjectURL(downloadUrl);
+      downloadUrl = "";
+      btnDownload.disabled = true;
+      try {
+        setVoiceSrc();
+        stream = canvas.captureStream(FPS);
+        const tracks = stream.getVideoTracks().slice();
+        const voiceTrack = captureVoiceTrack();
+        if (voiceTrack) tracks.push(voiceTrack);
+        const mixed = new MediaStream(tracks);
+        recorder = new MediaRecorder(mixed, { mimeType: mime });
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size) {
+            chunks.push(e.data);
+            console.log("Чанк", e.data.size);
+          }
+        };
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: recorder.mimeType || "video/webm" });
+          console.log("Нәтиже байт:", blob.size);
+          if (!blob.size) {
+            statusEl.textContent = "Бос файл. Chrome-ды көр.";
+            return;
+          }
+          downloadUrl = URL.createObjectURL(blob);
+          btnDownload.disabled = false;
+          statusEl.textContent = "Дайын. Дыбысы бар бейнені жүктеуге болады.";
+        };
+        recorder.start(250);
+        startPlay();
+        statusEl.textContent = "⏺ Жазылып жатыр... " + THEORIES[theoryIndex].title;
+      } catch (err) {
+        console.error(err);
+        alert("Жазу басталмады. Chrome-да аш.");
+      }
+    }
+
+    function buildTheoryBar() {
+      const bar = document.getElementById("theoryBar");
+      THEORIES.forEach((th, i) => {
+        const b = document.createElement("button");
+        b.textContent = (i + 1) + ". " + th.title;
+        b.className = i === 0 ? "on" : "";
+        b.onclick = () => {
+          theoryIndex = i;
+          t = 0;
+          playing = false;
+          stopVoice();
+          setVoiceSrc();
+          [...bar.children].forEach((el, j) => el.classList.toggle("on", j === i));
+          render(0);
+          statusEl.textContent = "Гипотеза: " + th.title + " · 30 секунд + дыбыстау";
+        };
+        bar.appendChild(b);
+      });
+    }
+
+    btnPlay.onclick = startPlay;
+    btnRecord.onclick = startRecord;
+    btnStop.onclick = () => {
+      playing = false;
+      stopVoice();
+      stopRecording();
+      statusEl.textContent = "Тоқтатылды.";
+    };
+    btnDownload.onclick = () => {
+      if (!downloadUrl) return;
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = "gipoteza-" + THEORIES[theoryIndex].id + ".webm";
+      a.click();
+    };
+
+    buildTheoryBar();
+    setVoiceSrc();
+    preloadAll().then(() => {
+      assetsReady = true;
+      render(0);
+      statusEl.textContent = "Гипотезаны таңда да, «Ойнату» немесе «Бейне жазу»-ды бас.";
+    });
+    render(0);
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
